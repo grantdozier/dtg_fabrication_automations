@@ -28,11 +28,8 @@ services:
       - "8001:8000"  # Changed to 8001 externally, still 8000 internally
     volumes:
       - ./backend/app:/app/app
-    command: >
-      sh -c "
-        python -c 'from app.db import SessionLocal; from app.seed import seed_database; db = SessionLocal(); seed_database(db); db.close()' &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-      "
+      - ./backend/startup.sh:/app/startup.sh
+    command: sh /app/startup.sh
 
   frontend:
     container_name: cnc_quoting_frontend

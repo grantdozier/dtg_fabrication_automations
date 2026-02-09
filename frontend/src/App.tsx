@@ -17,7 +17,7 @@ import {
   ViewInAr,
   Inventory,
   RequestQuote,
-  Precision,
+  PrecisionManufacturing,
 } from '@mui/icons-material'
 import Customers from './pages/Customers'
 import Materials from './pages/Materials'
@@ -35,7 +35,7 @@ const menuItems = [
   { text: 'Customers', icon: <People />, path: '/customers' },
   { text: 'Parts', icon: <ViewInAr />, path: '/parts' },
   { text: 'Materials', icon: <Inventory />, path: '/materials' },
-  { text: 'Machines', icon: <Precision />, path: '/machines' },
+  { text: 'Machines', icon: <PrecisionManufacturing />, path: '/machines' },
 ]
 
 function App() {
@@ -44,7 +44,7 @@ function App() {
       <Box sx={{ display: 'flex' }}>
         <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
           <Toolbar>
-            <Precision sx={{ mr: 2 }} />
+            <PrecisionManufacturing sx={{ mr: 2 }} />
             <Typography variant="h6" noWrap component="div">
               CNC Quoting System
             </Typography>
