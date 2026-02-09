@@ -1,0 +1,51 @@
+services:
+  db:
+    container_name: cnc_quoting_db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cncq
+    ports:
+      - "5433:5432"  # Changed to 5433 to avoid conflicts
+    volumes:
+      - cnc_quoting_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    container_name: cnc_quoting_backend
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/cncq
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8001:8000"  # Changed to 8001 externally, still 8000 internally
+    volumes:
+      - ./backend/app:/app/app
+    command: >
+      sh -c "
+        python -c 'from app.db import SessionLocal; from app.seed import seed_database; db = SessionLocal(); seed_database(db); db.close()' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  frontend:
+    container_name: cnc_quoting_frontend
+    build: ./frontend
+    environment:
+      - VITE_API_BASE=http://localhost:8001  # Updated to match new backend port
+    depends_on:
+      - backend
+    ports:
+      - "3001:5173"  # Changed to 3001 externally, still 5173 internally
+    volumes:
+      - ./frontend/src:/app/src
+      - /app/node_modules
+
+volumes:
+  cnc_quoting_postgres_data:
