@@ -13,10 +13,13 @@ import {
   TextField,
   Typography,
   Alert,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material'
-import { Save } from '@mui/icons-material'
-import { api, QuoteBreakdown } from '../api/client'
+import { Save, ViewList, ViewModule } from '@mui/icons-material'
+import { api, QuoteBreakdown, DetailedQuoteBreakdown } from '../api/client'
 import CostBreakdown from '../components/CostBreakdown'
+import DetailedCostBreakdown from '../components/DetailedCostBreakdown'
 
 export default function QuoteBuilder() {
   const navigate = useNavigate()
@@ -28,6 +31,8 @@ export default function QuoteBuilder() {
   const [marginPct, setMarginPct] = useState(0.15)
   const [notes, setNotes] = useState('')
   const [breakdown, setBreakdown] = useState<QuoteBreakdown | null>(null)
+  const [detailedBreakdown, setDetailedBreakdown] = useState<DetailedQuoteBreakdown | null>(null)
+  const [viewMode, setViewMode] = useState<'simple' | 'detailed'>('detailed')
   const [error, setError] = useState('')
 
   const { data: customers = [] } = useQuery({
@@ -54,16 +59,26 @@ export default function QuoteBuilder() {
   // Real-time calculation
   useEffect(() => {
     if (partId && quantity > 0) {
+      const params = {
+        part_id: partId as number,
+        quantity,
+        margin_pct: marginPct,
+      }
+
+      // Fetch simple breakdown
       api
-        .calculateQuote({
-          part_id: partId as number,
-          quantity,
-          margin_pct: marginPct,
-        })
+        .calculateQuote(params)
         .then(setBreakdown)
         .catch(() => setBreakdown(null))
+
+      // Fetch detailed breakdown
+      api
+        .calculateDetailedQuote(params)
+        .then(setDetailedBreakdown)
+        .catch(() => setDetailedBreakdown(null))
     } else {
       setBreakdown(null)
+      setDetailedBreakdown(null)
     }
   }, [partId, quantity, marginPct])
 
@@ -163,7 +178,35 @@ export default function QuoteBuilder() {
         </CardContent>
       </Card>
 
-      {breakdown && <CostBreakdown breakdown={breakdown} quantity={quantity} />}
+      {/* View Toggle */}
+      {breakdown && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, newMode) => newMode && setViewMode(newMode)}
+            aria-label="view mode"
+          >
+            <ToggleButton value="simple" aria-label="simple view">
+              <ViewList sx={{ mr: 1 }} />
+              Simple
+            </ToggleButton>
+            <ToggleButton value="detailed" aria-label="detailed view">
+              <ViewModule sx={{ mr: 1 }} />
+              Detailed
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+      )}
+
+      {/* Breakdown Display */}
+      {viewMode === 'simple' && breakdown && (
+        <CostBreakdown breakdown={breakdown} quantity={quantity} />
+      )}
+
+      {viewMode === 'detailed' && detailedBreakdown && (
+        <DetailedCostBreakdown breakdown={detailedBreakdown} />
+      )}
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
         <Button variant="outlined" onClick={() => navigate('/quotes')}>

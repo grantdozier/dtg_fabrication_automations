@@ -53,6 +53,85 @@ export interface QuoteBreakdown {
   total_time_hr: number
 }
 
+export interface TimeBreakdown {
+  setup_time_per_part: number
+  cycle_time: number
+  allowance_time: number
+  tool_change_time: number
+  inspection_time: number
+  total_time_per_part: number
+}
+
+export interface MaterialCost {
+  base: number
+  scrap: number
+  total: number
+}
+
+export interface CostBreakdownDetail {
+  material: MaterialCost
+  machine_cost: number
+  labor_cost: number
+  tooling_cost: number
+  programming_cost: number
+  inspection_cost: number
+  consumables_cost: number
+  overhead_cost: number
+  subtotal_cost: number
+  unit_cost: number
+  margin_amount: number
+  unit_price: number
+}
+
+export interface OperationTime {
+  setup_per_part: number
+  cycle: number
+  allowance: number
+  tool_change: number
+  inspection: number
+  total: number
+}
+
+export interface OperationCost {
+  machine: number
+  labor: number
+  tooling: number
+  consumables: number
+  total: number
+}
+
+export interface OperationBreakdown {
+  operation_name: string
+  operation_type: string
+  sequence: number
+  time: OperationTime
+  cost: OperationCost
+}
+
+export interface DetailedQuoteSummary {
+  quantity: number
+  unit_cost: number
+  unit_price: number
+  margin_pct: number
+  extended_cost: number
+  extended_price: number
+  profit_amount: number
+}
+
+export interface PartInfo {
+  part_number: string
+  description: string
+  material_name: string
+}
+
+export interface DetailedQuoteBreakdown {
+  time_breakdown: TimeBreakdown
+  cost_breakdown: CostBreakdownDetail
+  operations: OperationBreakdown[]
+  summary: DetailedQuoteSummary
+  part_info: PartInfo
+}
+
 export interface QuoteItem {
   id: number
   part_id: number
@@ -128,6 +207,12 @@ export const api = {
   // Quotes
   calculateQuote: (data: { part_id: number; quantity: number; margin_pct: number }) =>
     fetchJSON<QuoteBreakdown>('/api/quotes/calculate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  calculateDetailedQuote: (data: { part_id: number; quantity: number; margin_pct: number }) =>
+    fetchJSON<DetailedQuoteBreakdown>('/api/quotes/calculate-detailed', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
