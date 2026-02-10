@@ -32,6 +32,11 @@ export interface Operation {
   setup_time_hr: number
   cycle_time_hr: number
   allowance_pct: number
+  operation_type: string
+  tool_cost_per_part: number
+  tool_change_time_min: number
+  inspection_time_min: number
+  consumables_cost_per_part: number
 }
 
 export interface Part {
@@ -41,6 +46,10 @@ export interface Part {
   material_id: number
   stock_weight_lb: number
   scrap_factor: number
+  programming_time_hr: number
+  programming_rate_per_hr: number
+  first_article_inspection_hr: number
+  overhead_rate_pct: number
   operations: Operation[]
 }
 
@@ -201,6 +210,16 @@ export const api = {
   createPart: (data: Omit<Part, 'id'>) =>
     fetchJSON<Part>('/api/parts', {
       method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updatePart: (id: number, data: Partial<Omit<Part, 'id' | 'operations'>>) =>
+    fetchJSON<Part>(`/api/parts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  updateOperation: (partId: number, operationId: number, data: Partial<Operation>) =>
+    fetchJSON<Operation>(`/api/parts/${partId}/operations/${operationId}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
 
