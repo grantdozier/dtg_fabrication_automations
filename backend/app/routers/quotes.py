@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from typing import List
+from typing import List, Dict, Any
 from pydantic import BaseModel
 from ..db import get_db
 from .. import models
 from ..services.quoting import calc_unit_cost
+from ..services.quoting_enhanced import calc_detailed_quote
 
 router = APIRouter(prefix="/api/quotes", tags=["quotes"])
 
@@ -90,6 +91,69 @@ def calculate(payload: CalculateRequest, db: Session = Depends(get_db)):
     )
 
     return breakdown.to_dict()
+
+@router.post("/calculate-detailed")
+def calculate_detailed(payload: CalculateRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Calculate DETAILED cost breakdown for a part without saving.
+
+    Returns comprehensive breakdown with:
+    - Time breakdown (setup, cycle, allowance, tool changes, inspection)
+    - Cost breakdown (material, machine, labor, tooling, programming, overhead)
+    - Per-operation breakdown
+    - Summary with extended totals
+
+    Implements Rules 2, 3, and 4 with full itemization.
+    """
+    part = db.query(models.Part).options(
+        joinedload(models.Part.operations).joinedload(models.Operation.machine),
+        joinedload(models.Part.material)
+    ).filter(models.Part.id == payload.part_id).first()
+
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+
+    # Build operations list with enhanced data
+    ops = []
+    for op in part.operations:
+        ops.append({
+            "name": op.name,
+            "sequence": op.sequence,
+            "operation_type": op.operation_type,
+            "setup_time_hr": op.setup_time_hr,
+            "cycle_time_hr": op.cycle_time_hr,
+            "allowance_pct": op.allowance_pct,
+            "tool_change_time_min": op.tool_change_time_min,
+            "inspection_time_min": op.inspection_time_min,
+            "tool_cost_per_part": op.tool_cost_per_part,
+            "consumables_cost_per_part": op.consumables_cost_per_part,
+            "machine_rate_per_hr": op.machine.machine_rate_per_hr,
+            "labor_rate_per_hr": op.machine.labor_rate_per_hr,
+        })
+
+    # Calculate detailed breakdown
+    detailed_breakdown = calc_detailed_quote(
+        quantity=payload.quantity,
+        stock_weight_lb=part.stock_weight_lb,
+        cost_per_lb=part.material.cost_per_lb,
+        scrap_factor=part.scrap_factor,
+        ops=ops,
+        programming_time_hr=part.programming_time_hr,
+        programming_rate_per_hr=part.programming_rate_per_hr,
+        first_article_inspection_hr=part.first_article_inspection_hr,
+        overhead_rate_pct=part.overhead_rate_pct,
+        margin_pct=payload.margin_pct,
+    )
+
+    # Add part and material metadata
+    result = detailed_breakdown.to_dict()
+    result["part_info"] = {
+        "part_number": part.part_number,
+        "description": part.description,
+        "material_name": part.material.name,
+    }
+
+    return result
 
 @router.post("", response_model=QuoteResponse)
 def create_quote(payload: QuoteCreate, db: Session = Depends(get_db)):

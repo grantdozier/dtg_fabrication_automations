@@ -50,6 +50,12 @@ class Part(Base):
     stock_weight_lb: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     scrap_factor: Mapped[float] = mapped_column(Float, nullable=False, default=0.05)  # 5%
 
+    # Enhanced cost tracking (Rule 2, 3)
+    programming_time_hr: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # CAM/programming time
+    programming_rate_per_hr: Mapped[float] = mapped_column(Float, nullable=False, default=75.0)  # Programming labor rate
+    first_article_inspection_hr: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # One-time FAI
+    overhead_rate_pct: Mapped[float] = mapped_column(Float, nullable=False, default=1.5)  # 150% overhead multiplier
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     material: Mapped["Material"] = relationship("Material", back_populates="parts")
@@ -68,6 +74,13 @@ class Operation(Base):
     setup_time_hr: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)   # one-time
     cycle_time_hr: Mapped[float] = mapped_column(Float, nullable=False, default=0.25)  # per part
     allowance_pct: Mapped[float] = mapped_column(Float, nullable=False, default=0.10)  # 10%
+
+    # Enhanced operation tracking (Rule 2, 3)
+    operation_type: Mapped[str] = mapped_column(String(20), nullable=False, default="machining")  # roughing, finishing, inspection, deburr
+    tool_cost_per_part: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # Tooling cost allocation
+    tool_change_time_min: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # Tool change time
+    inspection_time_min: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # In-process inspection
+    consumables_cost_per_part: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # Coolant, abrasives
 
     part: Mapped["Part"] = relationship("Part", back_populates="operations")
     machine: Mapped["Machine"] = relationship("Machine", back_populates="operations")
@@ -101,6 +114,19 @@ class QuoteItem(Base):
     labor_cost_unit: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     unit_cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     unit_price: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+
+    # Enhanced breakdown fields (Rule 2, 3, 4)
+    tooling_cost_unit: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    programming_cost_unit: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    inspection_cost_unit: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    consumables_cost_unit: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    overhead_cost_unit: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+
+    # Time breakdown fields (Rule 2)
+    setup_time_per_part: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    cycle_time_per_part: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    allowance_time_per_part: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    total_time_per_part: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
     quote: Mapped["Quote"] = relationship("Quote", back_populates="items")
     part: Mapped["Part"] = relationship("Part", back_populates="quote_items")
